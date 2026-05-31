@@ -10,6 +10,8 @@ While working a field job, I was tasked with figuring out why a TransCore Encomp
 
 The cause was simple and undocumented anywhere obvious: **the Encompass 4 ships from the factory with Wiegand output DISABLED.** This unit had never been programmed. Querying it confirmed the smoking gun — `#532` returned `TOF 0` (Wiegand off). Nothing was broken; it just needed to be configured over serial, which requires a **true RS-232** connection and the right command sequence. Terminal apps (PuTTY etc.) were unreliable for this — CR handling and the reader "dinging" on input — so I wrote this script to talk to the serial port directly.
 
+> **As of May 2026** (the manufacture date stamped on the unit I worked on, firmware `Ver 1.12`): Wiegand was off out of the box. Factory defaults can change between production runs — so always run `read` first to confirm your unit's actual state rather than assuming.
+
 This repo is that script, plus everything I had to work out about the hardware, wiring, and command set — published in case it saves the next person the afternoon it cost me.
 
 ## TL;DR fix
@@ -60,10 +62,12 @@ Cross TX/RX between the two sides:
 - Reader **RX** → cable **TXD (pin 3)**
 - Reader **GND** → cable **GND (pin 4 or 5)**
 
+**Reader lead colors** (on the unit I had — colors can vary by hardware revision, so verify yours with the `listen` test): **Black = TX**, **Red = RX**, **Blue = GND**.
+
 **Verify your cable first:** bridge pins 3 and 6 with a jumper (loopback) and confirm a terminal echoes what you type. That proves pin 3 = TX / pin 6 = RX on *your* specific cable — some clones differ.
 
 > ### Got no sign-on banner? Swap your two data leads.
-> This is the single most common gotcha. If `listen` mode shows nothing when you power-cycle the reader, your **TX/RX are backwards** — swap the two data wires and try again. (GND stays put.)
+> This is the single most common gotcha. If `listen` mode shows nothing when you power-cycle the reader, your **TX/RX are backwards** — swap the two data wires (**Black ↔ Red** on the unit I had) and try again. (GND / Blue stays put.)
 
 ## Usage
 
