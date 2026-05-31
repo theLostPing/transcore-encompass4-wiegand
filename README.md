@@ -62,12 +62,24 @@ Cross TX/RX between the two sides:
 - Reader **RX** → cable **TXD (pin 3)**
 - Reader **GND** → cable **GND (pin 4 or 5)**
 
-**Reader lead colors** (on the unit I had — colors can vary by hardware revision, so verify yours with the `listen` test): **Black = TX**, **Red = RX**, **Blue = GND**.
+### Reader wire colors & pairs (manufacturer — RS-232, Table 3)
+
+The reader is wired as **DCE**, so it maps **straight** to a PC DB9 (no null-modem needed). The RS-232 signals live on two of the reader's twisted pairs — you only land **3 wires**:
+
+| Reader wire | Twisted pair | Function | Host DB9 pin (DB25) |
+|-------------|--------------|----------|---------------------|
+| **Black** | **Red/Black** pair | reader **TX** → your RX | **2** (3) |
+| **Red** | **Red/Black** pair | reader **RX** → your TX | **3** (2) |
+| **Yellow** | **Yellow/Black** pair | **Signal Ground** | **5** (7) |
+
+So: **Black→pin 2, Red→pin 3, Yellow→pin 5.**
+
+> ⚠️ **Do not use Blue for ground.** On this reader Blue is **Wiegand Data0** — the RS-232 signal ground is the **Yellow** wire of the **Yellow/Black** pair. (Connect the cable shield to earth ground for surge protection.)
 
 **Verify your cable first:** bridge pins 3 and 6 with a jumper (loopback) and confirm a terminal echoes what you type. That proves pin 3 = TX / pin 6 = RX on *your* specific cable — some clones differ.
 
 > ### Got no sign-on banner? Swap your two data leads.
-> This is the single most common gotcha. If `listen` mode shows nothing when you power-cycle the reader, your **TX/RX are backwards** — swap the two data wires (**Black ↔ Red** on the unit I had) and try again. (GND / Blue stays put.)
+> This is the single most common gotcha. If `listen` mode shows nothing when you power-cycle the reader, your **TX/RX are backwards** — swap the two data wires, **Black ↔ Red** (the Red/Black pair), and try again. (Yellow / ground stays put.)
 
 ## Usage
 
