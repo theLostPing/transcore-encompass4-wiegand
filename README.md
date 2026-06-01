@@ -6,9 +6,9 @@ No modules, no installers. Just `System.IO.Ports.SerialPort` from built-in Power
 
 ## Why this exists
 
-While working a field job, I was tasked with figuring out why a TransCore Encompass 4 reader would **click/read a tag but produce no Wiegand output** to the gate access panel. The RF side was clearly working — it saw tags — but the panel got nothing.
+On a field job I was tasked with figuring out why a TransCore Encompass 4 reader would **click on a tag but send no Wiegand output** to the gate access panel. The RF side was clearly working — it read tags fine — but the panel got nothing.
 
-The cause was simple and undocumented anywhere obvious: **the Encompass 4 ships from the factory with Wiegand output DISABLED.** This unit had never been programmed. Querying it confirmed the smoking gun — `#532` returned `TOF 0` (Wiegand off). Nothing was broken; it just needed to be configured over serial, which requires a **true RS-232** connection and the right command sequence. Terminal apps (PuTTY etc.) were unreliable for this — CR handling and the reader "dinging" on input — so I wrote this script to talk to the serial port directly.
+The cause was simple, and it's buried in the documentation rather than missing from it: **the Encompass 4 ships from the factory with Wiegand output disabled.** This unit had never been programmed. Querying it confirmed the smoking gun — `#532` returned `TOF 0` (Wiegand off). Nothing was broken; it just needed to be configured over serial, which requires a **true RS-232** connection and the right command sequence. Terminal apps (PuTTY etc.) were unreliable for this — CR handling and the reader "dinging" on input — so I wrote this script to talk to the serial port directly.
 
 > **As of May 2026** (the manufacture date stamped on the unit I worked on, firmware `Ver 1.12`): Wiegand was off out of the box. Factory defaults can change between production runs — so always run `read` first to confirm your unit's actual state rather than assuming.
 
@@ -41,7 +41,9 @@ That is exactly what `.\e4-serial.ps1 wiegand` does, with an automatic read-back
 - A Windows laptop with PowerShell (built-in — nothing to install).
 - A **true RS-232** USB serial connection — **not TTL.** Two options that work:
   - A **USB-to-DB9 RS-232 adapter** (FTDI or Prolific) — simplest.
-  - A **USB-to-RJ45 "Cisco" console cable** (FTDI-based). These have proper RS-232 level shifting, so they're electrically compatible with the reader. **This is what I used** (a generic FTDI Cisco-style USB console cable).
+  - A **USB-to-RJ45 "Cisco" console cable** (FTDI-based). These have proper RS-232 level shifting, so they're electrically compatible with the reader. **This is what I used.**
+    - **The exact cable I used (suggested, not required):** [USB Console Cable — USB to RJ45 Console Cable for Cisco Routers / AP Router / Switch, Windows / Mac / Linux (1.8 m, Blue)](https://www.amazon.com/dp/B075V1RGQK).
+    - **Any true RS-232 serial adapter *may* work** — the only hard requirements are real RS-232 levels (**not TTL**) and a reader part number that's RS-232 (`10-40x2-…`, see above). But cheap clones vary in chipset and RJ45 pinout, so a different adapter may or may not behave: confirm yours with the loopback test below before trusting it (some won't enumerate, some have TX/RX swapped).
 - A few jumper wires to land the reader's serial leads onto the cable.
 
 ## Wiring
@@ -77,6 +79,18 @@ So: **Black→pin 2, Red→pin 3, Yellow→pin 5.**
 > ⚠️ **Do not use Blue for ground.** On this reader Blue is **Wiegand Data0** — the RS-232 signal ground is the **Yellow** wire of the **Yellow/Black** pair. (Connect the cable shield to earth ground for surge protection.)
 
 **Verify your cable first:** bridge pins 3 and 6 with a jumper (loopback) and confirm a terminal echoes what you type. That proves pin 3 = TX / pin 6 = RX on *your* specific cable — some clones differ.
+
+### Reaching a distant reader over Cat6 (what I did)
+
+The reader sat too far from where I could work with a laptop, so rather than running jumpers straight off the console cable I extended its RJ45 end through a plain **RJ45 coupler** into a long run of **Cat6**, then landed three conductors on the reader's serial leads at the far end. With standard **T568B** wiring, only three of the eight wires are used:
+
+| Cat6 conductor (T568B) | RJ45 pin | Console-cable signal | Lands on reader |
+|------------------------|----------|----------------------|-----------------|
+| **green/white** (green stripe) | 3 | **TXD** (cable → reader) | reader **RX** — Red |
+| **green** | 6 | **RXD** (reader → cable) | reader **TX** — Black |
+| **blue** | 4 | **GND** | reader **GND** — Yellow |
+
+So the only conductors that matter are **green, green/white, and blue** — the other five are left unused. (If your cable or coupler is wired T568A, the green and orange pairs swap, so verify with the loopback test.) This is purely for reach; a few jumper wires directly off the console cable do exactly the same job.
 
 > ### Got no sign-on banner? Swap your two data leads.
 > This is the single most common gotcha. If `listen` mode shows nothing when you power-cycle the reader, your **TX/RX are backwards** — swap the two data wires, **Black ↔ Red** (the Red/Black pair), and try again. (Yellow / ground stays put.)
