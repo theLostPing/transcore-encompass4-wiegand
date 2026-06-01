@@ -142,6 +142,8 @@ powershell -ExecutionPolicy Bypass -File .\e4-serial.ps1 wiegand
 
 Power-cycle the reader and present a tag — the panel should now receive 26-bit Wiegand.
 
+> **This is permanent.** `wiegand` ends with `#00`, which commits the change to **non-volatile memory** — it survives a reader reboot/power-cycle. Once the read-back shows Wiegand enabled, the job is done; you don't need to return to the site.
+
 **Ad-hoc — send any single command (`send`).**
 
 ```powershell
