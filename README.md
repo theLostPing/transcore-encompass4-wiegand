@@ -152,21 +152,21 @@ powershell -ExecutionPolicy Bypass -File .\e4-serial.ps1 send "#570"
 
 ## Command reference
 
-The E4 command set is large; these are the ones relevant to this task.
+The E4 command set is large; these are the ones relevant to this task — listed in the order you'd actually use them: **enter command mode → query → change → save & exit.**
 
 | Command | Meaning |
 |---------|---------|
-| `#01` | Enter **command mode** |
-| `#00` | Return to **data mode** (commits/saves changes to NVM) |
-| `#505` | Firmware version / model / serial number |
-| `#527` | RF status |
-| `#570` | Enabled tag protocols |
-| `#532` | Wiegand enabled? — **`TOF 0` = Wiegand OFF** (the smoking gun) |
-| `#531` | Wiegand format |
-| `#533` | Wiegand interval |
-| `#451` | Wiegand output **ON** |
-| `#871` | **26-bit** Wiegand format |
-| `#6401` | RF **ON** |
+| `#01` | **Enter command mode** — send first |
+| `#505` | *Query:* firmware version / model / serial number |
+| `#527` | *Query:* RF status |
+| `#570` | *Query:* enabled tag protocols |
+| `#532` | *Query:* Wiegand enabled? — **`TOF 0` = Wiegand OFF** (the smoking gun) |
+| `#531` | *Query:* Wiegand format |
+| `#533` | *Query:* Wiegand interval |
+| `#451` | *Change:* Wiegand output **ON** |
+| `#871` | *Change:* **26-bit** Wiegand format |
+| `#6401` | *Change:* RF **ON** |
+| `#00` | **Save & exit** — commit changes to NVM and return to data mode; **send last** |
 
 ---
 
