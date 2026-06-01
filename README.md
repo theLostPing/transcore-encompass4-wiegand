@@ -168,7 +168,42 @@ The E4 command set is large; these are the ones relevant to this task — listed
 | `#451` | *Change:* Wiegand output **ON** |
 | `#871` | *Change:* **26-bit** Wiegand format |
 | `#6401` | *Change:* RF **ON** |
+| `#644NN` | *Change:* **TX power attenuation**, `NN` = `00`–`14` hex (0–20 dB); `00` = max power |
+| `#643NN` | *Change:* **ATA receive range**, `NN` = `00`–`1F` hex; `1F` = max range |
+| `#645NN` | *Change:* **SeGo/eGo receive range**, `NN` = `00`–`1F` hex; `1F` = max range |
+| `#66F` | *Change:* restore factory defaults (keeps frequency) |
 | `#00` | **Save & exit** — commit changes to NVM and return to data mode; **send last** |
+
+---
+
+## Tuning RF power / read range (`power` mode)
+
+If a reader reads tags from **too far away** (catches cars in the wrong lane, fires on adjacent tags), turn it down. There are two independent levers, both in hex:
+
+- **Transmit power** — `#644NN`, attenuation `00`–`14` (0–20 dB). Higher = weaker carrier = shorter range. This is the main knob.
+- **Receive range** — `#643NN` (ATA) and `#645NN` (SeGo/eGo), `00`–`1F`. Lower = reader rejects weaker tag replies = tighter window.
+
+The script's **menu-driven** `power` mode handles all of this — it reads and decodes `#527`, lets you set TX attenuation and either receive range, offers SHORT / MEDIUM / MAX presets, and commits to NVM on exit:
+
+```
+powershell -ExecutionPolicy Bypass -File .\e4-serial.ps1 power
+```
+
+```
+=== E4 RF POWER / RANGE TUNER ===
+Current state:
+  TX attenuation  A00  = 0 dB cut   (0 = max power)
+  ATA recv range  R1F  = 31/31      (1F = max range)
+  SeGo/eGo range  G1F  = 31/31      (1F = max range)
+ 1) Lower TX power    (set attenuation, 0-20 dB)
+ 2) Set ATA receive range      (0-31)
+ 3) Set SeGo/eGo receive range (0-31)
+ 4) Preset: SHORT range  (10 dB cut + ranges -> 15)
+ ...
+ S) Save and exit
+```
+
+Start with TX attenuation (option 1), bump it 3–5 dB at a time, and re-test with a tag. If you overshoot, option 8 restores factory defaults.
 
 ---
 
