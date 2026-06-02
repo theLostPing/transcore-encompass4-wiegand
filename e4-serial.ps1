@@ -8,6 +8,7 @@
 #  Full docs + wiring: see README.md
 #
 #  Usage (run on the LAPTOP, in PowerShell, from wherever you save this):
+#     powershell -ExecutionPolicy Bypass -File .\e4-serial.ps1 test      <- confirm link, NO power-cycle
 #     powershell -ExecutionPolicy Bypass -File .\e4-serial.ps1 listen
 #     powershell -ExecutionPolicy Bypass -File .\e4-serial.ps1 read
 #     powershell -ExecutionPolicy Bypass -File .\e4-serial.ps1 wiegand
@@ -59,6 +60,22 @@ function Show-RF($sp){
 function To-Hex2($n){ return ('{0:X2}' -f [int]$n) }
 
 switch ($mode) {
+
+  "test" {
+        # LINK TEST - confirms two-way comms WITHOUT a power-cycle.
+        # Asks the reader its model (#505); a reply means TX and RX are both good.
+        $sp = Open-E4
+        Write-Host "--- LINK TEST (no power-cycle needed) ---" -ForegroundColor Green
+        [void](Send-Cmd $sp "#01")
+        $sn = (Send-Cmd $sp "#505").Trim()
+        [void](Send-Cmd $sp "#00")
+        if($sn -match "Model|Ver|SN" -or $sn -match "^#\w"){
+            Write-Host ("LINK OK -> " + $sn) -ForegroundColor Green
+        } else {
+            Write-Host ("NO REPLY [" + $sn + "] - check COM port, baud 9600, wiring (swap Red/Black), reader power.") -ForegroundColor Red
+        }
+        $sp.Close()
+  }
 
   "listen" {
         # LISTEN ONLY - tests reader-TX -> laptop-RX path.

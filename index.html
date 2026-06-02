@@ -2,6 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<script>
+// Web Serial needs a secure context. If we arrived over plain http (not localhost),
+// upgrade to https immediately — otherwise navigator.serial won't exist.
+(function(){
+  if(location.protocol==='http:' && !/^(localhost|127\.|\[?::1)/.test(location.hostname)){
+    location.replace('https:'+location.href.substring(location.protocol.length));
+  }
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0b5d3b">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -71,9 +80,11 @@
 <div class="card">
   <h2>Step 1 — Verify the link</h2>
   <div class="row">
-    <button id="btnBanner" disabled>📻 Banner test (power-cycle reader)</button>
+    <button id="btnPing" class="primary" disabled>✅ Test link (no power-cycle)</button>
+    <button id="btnBanner" disabled>📻 Banner test (power-cycle)</button>
     <button id="btnRead" disabled>🔍 Read current config</button>
   </div>
+  <div class="small" style="margin-top:8px"><b>Test link</b> just asks the reader its model (<code>#505</code>) and waits for a reply — instant confirmation that both wires are good, no power-cycle. Use <b>Banner test</b> only if Test link gets nothing and you want to isolate the TX vs RX direction.</div>
   <table id="state" style="display:none">
     <tr><td>Model / SN</td><td id="vModel">—</td></tr>
     <tr><td>RF carrier</td><td id="vRf">—</td></tr>
@@ -116,13 +127,17 @@
       <input type="range" id="sSego" min="0" max="31" value="31" step="1">
       <div class="small">31 = max acceptance. Trim these <i>after</i> setting TX power.</div>
     </details>
+    <div class="row" style="margin-top:14px">
+      <button id="btnApplyPwr" class="send" disabled>🎚 Apply power &amp; save</button>
+    </div>
+    <div class="small" style="margin-top:6px">Sends <b>only</b> the power/range, saves to NVM, and drops the reader back to <b>data mode</b> — so you can <b>present a tag and test right away</b>. Repeat as you dial it in. Wiegand and format are left untouched.</div>
   </fieldset>
 
   <div class="row" style="margin-top:16px">
     <button id="btnSend" class="send" disabled>⬆️ Send &amp; save to reader</button>
     <button id="btnFactory" class="warnbtn" disabled>Factory reset (#66F)</button>
   </div>
-  <div class="small" style="margin-top:6px">Send writes <code>#01</code> → your settings → <code>#00</code> (saves to NVM), then re-reads to confirm.</div>
+  <div class="small" style="margin-top:6px">“Send &amp; save” writes <b>all</b> of the above (Wiegand + format + RF + power) in one shot and saves. To dial in <b>just the power</b>, use <b>Apply power &amp; save</b> in the box above instead.</div>
 </div>
 
 <div class="card">
@@ -143,13 +158,33 @@
 const $ = id => document.getElementById(id);
 let port=null, writer=null, reader=null, keepReading=false, rxAccum='';
 
-// ---- environment checks ----
-if(location.protocol === 'file:'){
-  $('compat').innerHTML = '<div class="banner warn">⚠️ Opened as a local file. Browsers block serial access from <code>file://</code> — use the hosted page at <b>fieldtoolkit.com/e4/</b> to actually talk to the reader. This local copy is reference-only.</div>';
-} else if(!('serial' in navigator)){
-  $('compat').innerHTML = '<div class="banner bad">❌ This browser has no Web Serial support. Open this page in <b>Chrome or Edge</b> on a desktop. (Firefox, Safari, and mobile browsers will not work.)</div>';
-  $('btnConnect').disabled = true;
-}
+// ---- environment checks: say EXACTLY why serial is unavailable ----
+(function(){
+  const ua = navigator.userAgent;
+  const isEdge   = /Edg\//.test(ua);
+  const isChrome = /Chrome\//.test(ua) && !/OPR\/|Edg\//.test(ua);
+  const isBrave  = !!(navigator.brave);
+  const mobile   = /Android|iPhone|iPad|Mobile/.test(ua);
+  let msg = null;
+  if(location.protocol === 'file:'){
+    msg = '⚠️ Opened as a local <code>file://</code> — browsers block serial there. Use the hosted page <b>https://fieldtoolkit.com/e4/</b>. (This local copy is reference-only.)';
+  } else if(!window.isSecureContext){
+    msg = '🔒 Insecure connection. You are on <code>'+location.protocol+'//</code> — Web Serial only works over <b>HTTPS</b>. Go to <b>https://'+location.host+location.pathname+'</b>.';
+  } else if(!('serial' in navigator)){
+    if(isBrave){
+      msg = '🦁 Brave disables Web Serial by default. Enable it at <code>brave://settings/content/serialPorts</code> (or use Chrome/Edge).';
+    } else if(mobile || !(isChrome||isEdge)){
+      msg = '❌ This browser has no Web Serial. Use <b>desktop Chrome or Edge</b> (Firefox, Safari, and all mobile browsers will not work).';
+    } else {
+      msg = '🚫 Web Serial is missing in this Chrome/Edge — almost always <b>blocked by an enterprise/managed-device policy</b>. Check <code>chrome://policy</code> for <code>DefaultSerialGuardSetting=2</code> or a disabled Serial API. Use an unmanaged browser/profile if so.';
+    }
+  }
+  if(msg){
+    const bad = /Insecure|no Web Serial|blocked|file:|Brave/i.test(msg);
+    document.getElementById('compat').innerHTML = '<div class="banner '+(bad?'bad':'warn')+'">'+msg+'</div>';
+    document.getElementById('btnConnect').disabled = true;
+  }
+})();
 
 // ---- logging ----
 function pad(n){ return String(n).padStart(2,'0'); }
@@ -206,7 +241,7 @@ async function disconnect(){
 function setConnected(c){
   $('status').textContent = c?'Connected':'Disconnected';
   $('status').className = 'pill '+(c?'on':'off');
-  ['btnBanner','btnRead','btnSend','btnRaw','btnFactory'].forEach(id=>$(id).disabled=!c);
+  ['btnPing','btnBanner','btnRead','btnSend','btnApplyPwr','btnRaw','btnFactory'].forEach(id=>$(id).disabled=!c);
   $('btnConnect').disabled=c; $('btnDisconnect').disabled=!c;
 }
 
@@ -218,6 +253,22 @@ async function sendCmd(cmd, waitMs=500){
   await writer.write(new TextEncoder().encode(cmd + '\r'));
   await sleep(waitMs);
   return rxAccum.replace(/\r/g,' ').trim();
+}
+
+// ---- test link (no power-cycle): query the reader live ----
+async function testLink(){
+  disableAll(true);
+  log('=== TEST LINK (no power-cycle) ===','sys');
+  await sendCmd('#01');
+  const sn = await sendCmd('#505');
+  await sendCmd('#00');
+  if(/model|ver|sn\d/i.test(sn) || /^#\w/.test(sn)){
+    log('✔ LINK OK — reader replied: '+sn,'sys');
+    $('vModel').textContent = sn; $('state').style.display='table';
+  } else {
+    log('✘ No reply ['+(sn||'')+']. Check: right COM port, baud 9600, wiring (swap Red↔Black), reader powered.','err');
+  }
+  disableAll(false);
 }
 
 // ---- banner test ----
@@ -292,16 +343,30 @@ async function program(){
   await sleep(300);
   await readConfig();
 }
+async function applyPower(){
+  disableAll(true);
+  log('=== APPLY POWER + SAVE ===','sys');
+  await sendCmd('#01');                                  // command mode
+  await sendCmd('#644'+hex2((100-$('sTx').value)/5));    // TX attenuation (100%=0dB)
+  await sendCmd('#643'+hex2($('sAta').value));           // ATA range
+  await sendCmd('#645'+hex2($('sSego').value));          // SeGo range
+  const rf = await sendCmd('#527');                      // confirm new values
+  await sendCmd('#00');                                  // SAVE to NVM + back to data mode
+  const t = tokens(rf);
+  if(t.A!==undefined) log('✔ Saved (A'+t.A.toUpperCase()+'). Reader is back in data mode — present a tag to test now.','sys');
+  else log('✔ Power saved — reader back in data mode, present a tag to test now.','sys');
+  disableAll(false);
+}
 async function factory(){
-  if(!confirm('Factory reset the reader (#66F)? Keeps RF frequency, wipes everything else.')) return;
+  if(!confirm('Factory reset (#66F)?\n\nThis wipes everything except the RF frequency — it turns Wiegand OFF and the RF carrier OFF. You will have to re-enable Wiegand + RF and hit “Send & save” afterward.\n\nProceed?')) return;
   disableAll(true);
   await sendCmd('#01'); await sendCmd('#66F'); await sendCmd('#00');
-  log('Factory reset sent.','sys');
+  log('Factory reset sent — Wiegand and RF are now OFF (expected). Re-check both boxes and hit “Send & save” to restore.','sys');
   await sleep(300); await readConfig();
 }
 
 function disableAll(busy){
-  ['btnBanner','btnRead','btnSend','btnRaw','btnFactory','btnDisconnect'].forEach(id=>$(id).disabled=busy || !port);
+  ['btnPing','btnBanner','btnRead','btnSend','btnApplyPwr','btnRaw','btnFactory','btnDisconnect'].forEach(id=>$(id).disabled=busy || !port);
 }
 
 // ---- hex + slider labels ----
@@ -313,9 +378,11 @@ function updSego(){ const v=$('sSego').value; $('lblSego').textContent=`${v} · 
 // ---- wiring ----
 $('btnConnect').onclick=connect;
 $('btnDisconnect').onclick=disconnect;
+$('btnPing').onclick=testLink;
 $('btnBanner').onclick=bannerTest;
 $('btnRead').onclick=readConfig;
 $('btnSend').onclick=program;
+$('btnApplyPwr').onclick=applyPower;
 $('btnFactory').onclick=factory;
 $('btnRaw').onclick=async()=>{ const c=$('rawIn').value.trim(); if(c){ await sendCmd(c, 600); } };
 $('rawIn').addEventListener('keydown',e=>{ if(e.key==='Enter') $('btnRaw').click(); });
