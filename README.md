@@ -213,6 +213,23 @@ Start with TX attenuation (option 1), bump it 3–5 dB at a time, and re-test wi
 - `#00` commits to non-volatile memory, so the setting survives a power cycle.
 - Default RF frequency on US units is ~915 MHz.
 
+---
+
+## Web programmer (no install)
+
+`index.html` is a browser-based version of this tool. It talks to the reader's
+USB-serial port directly via the **Web Serial API** — no PowerShell, no install.
+Connect, then drive the reader with checkboxes (Wiegand / RF on), radio buttons
+(26/32/34/35/37-bit format), and a power slider (`#644` attenuation, shown as a
+0–100% scale where 100% = full power). **Read** pulls the reader's current config
+and snaps every control to match it; **Send** writes your settings and saves to NVM.
+A raw command console at the bottom logs every byte in and out.
+
+- **Live (canonical):** <https://fieldtoolkit.com/e4/>
+- Requires **Chrome or Edge** on desktop. Web Serial needs a secure context, so a
+  `file://` copy of this page can't open the port — the page detects that and says
+  so. Use the hosted URL to actually program a reader.
+
 ## License
 
 MIT — see [LICENSE](LICENSE). Use at your own risk; this touches live access-control hardware.

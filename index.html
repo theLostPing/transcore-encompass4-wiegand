@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0b5d3b">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<title>TransCore E4 — Web Programmer</title>
+<style>
+  :root{ --bg:#10151a; --card:#19212a; --ink:#e8eef2; --mut:#9fb0bd; --acc:#2ea36f; --acc2:#3da9ff; --warn:#e0a33a; --bad:#e05a5a; --line:#2a3640; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; padding:14px; max-width:820px; margin:0 auto; }
+  h1{ font-size:21px; margin:.2em 0 .1em; }
+  h2{ font-size:16px; margin:0 0 .6em; color:var(--acc); }
+  .sub{ color:var(--mut); font-size:13px; margin-bottom:1em; }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin:12px 0; }
+  code{ background:#0c1217; border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; color:#cfe8d9; }
+  button{ font:inherit; font-size:15px; font-weight:600; border:1px solid var(--line); background:#0c1217; color:var(--ink); border-radius:9px; padding:9px 16px; cursor:pointer; }
+  button:hover:not(:disabled){ border-color:var(--acc); }
+  button:disabled{ opacity:.4; cursor:not-allowed; }
+  button.primary{ background:var(--acc); border-color:var(--acc); color:#06140d; }
+  button.send{ background:var(--acc2); border-color:var(--acc2); color:#04151f; }
+  button.warnbtn{ background:#2a1f12; border-color:var(--warn); color:var(--warn); }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .pill{ display:inline-block; border-radius:999px; padding:3px 12px; font-size:13px; font-weight:600; }
+  .pill.off{ background:#2a1416; color:var(--bad); border:1px solid var(--bad); }
+  .pill.on{ background:#0e2419; color:var(--acc); border:1px solid var(--acc); }
+  label.opt{ display:inline-flex; align-items:center; gap:7px; background:#0c1217; border:1px solid var(--line); border-radius:8px; padding:7px 12px; cursor:pointer; font-size:14px; }
+  label.opt:hover{ border-color:var(--acc2); }
+  input[type=checkbox],input[type=radio]{ width:17px; height:17px; accent-color:var(--acc); }
+  .grp{ display:flex; gap:8px; flex-wrap:wrap; margin:.3em 0; }
+  fieldset{ border:1px solid var(--line); border-radius:10px; margin:14px 0 0; padding:12px 14px; }
+  legend{ color:var(--acc2); font-weight:600; font-size:13px; padding:0 8px; }
+  input[type=range]{ width:100%; accent-color:var(--acc); height:26px; }
+  .slabel{ display:flex; justify-content:space-between; font-size:14px; margin:.6em 0 .1em; }
+  .slabel b{ color:var(--warn); font-family:ui-monospace,monospace; }
+  .small{ color:var(--mut); font-size:12px; }
+  #raw{ background:#0a0e12; border:1px solid var(--line); border-radius:10px; padding:10px; height:280px; overflow-y:auto; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px; white-space:pre-wrap; word-break:break-all; }
+  .tx{ color:var(--acc2); }
+  .rx{ color:#cfe8d9; }
+  .sys{ color:var(--mut); }
+  .err{ color:var(--bad); }
+  .ts{ color:#54636e; }
+  input.raw{ flex:1; min-width:140px; font:inherit; font-family:ui-monospace,monospace; background:#0c1217; border:1px solid var(--line); border-radius:8px; color:var(--ink); padding:8px 10px; }
+  .banner{ border-radius:10px; padding:10px 14px; margin:10px 0; font-size:14px; }
+  .banner.bad{ background:#2a1416; border:1px solid var(--bad); color:#ffd3d3; }
+  .banner.warn{ background:#2a1f12; border:1px solid var(--warn); color:#ffe6bd; }
+  table{ width:100%; border-collapse:collapse; font-size:13.5px; margin-top:6px; }
+  td{ padding:4px 6px; border-bottom:1px solid var(--line); }
+  td:first-child{ color:var(--mut); white-space:nowrap; }
+  td:last-child{ font-family:ui-monospace,monospace; color:#cfe8d9; }
+  a{ color:var(--acc2); }
+</style>
+</head>
+<body>
+
+<h1>📡 TransCore E4 — Web Programmer</h1>
+<div class="sub">Programs an Encompass 4 reader straight from the browser over USB-serial. No install — Chrome or Edge only. RS-232 model · 9600 8-N-1.</div>
+
+<div id="compat"></div>
+
+<div class="card">
+  <div class="row">
+    <button id="btnConnect" class="primary">🔌 Connect</button>
+    <button id="btnDisconnect" disabled>Disconnect</button>
+    <span id="status" class="pill off">Disconnected</span>
+  </div>
+  <div class="small" style="margin-top:8px">Click Connect, pick the reader's USB-serial / FTDI port. No port listed? Install the FTDI VCP driver. No data after connecting? <b>Swap the Red ↔ Black leads</b> and try the banner test.</div>
+</div>
+
+<div class="card">
+  <h2>Step 1 — Verify the link</h2>
+  <div class="row">
+    <button id="btnBanner" disabled>📻 Banner test (power-cycle reader)</button>
+    <button id="btnRead" disabled>🔍 Read current config</button>
+  </div>
+  <table id="state" style="display:none">
+    <tr><td>Model / SN</td><td id="vModel">—</td></tr>
+    <tr><td>RF carrier</td><td id="vRf">—</td></tr>
+    <tr><td>Wiegand output</td><td id="vWieg">—</td></tr>
+    <tr><td>Frequency</td><td id="vFreq">—</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <h2>Step 2 — Set it up, then Send</h2>
+
+  <div class="grp">
+    <label class="opt"><input type="checkbox" id="cbWieg" checked> Wiegand output ON</label>
+    <label class="opt"><input type="checkbox" id="cbRf" checked> RF carrier ON</label>
+  </div>
+
+  <fieldset>
+    <legend>Wiegand format</legend>
+    <div class="grp">
+      <label class="opt"><input type="radio" name="fmt" value="871" checked> 26-bit</label>
+      <label class="opt"><input type="radio" name="fmt" value="872"> 32-bit</label>
+      <label class="opt"><input type="radio" name="fmt" value="873"> 34-bit</label>
+      <label class="opt"><input type="radio" name="fmt" value="874"> 35-bit HID</label>
+      <label class="opt"><input type="radio" name="fmt" value="875"> 37-bit</label>
+      <label class="opt"><input type="radio" name="fmt" value="870"> off</label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>RF power / read range</legend>
+    <div class="slabel"><span>TX power — main range knob</span><b id="lblTx">100% · 0 dB cut · #64400</b></div>
+    <input type="range" id="sTx" min="0" max="100" value="100" step="5">
+    <div class="small">100% = full power / max range (slide left to weaken). Reads from too far? Drop ~15–25% and re-test. Each 5% = 1 dB attenuation on <code>#644</code>.</div>
+
+    <details style="margin-top:12px">
+      <summary class="small" style="cursor:pointer">Advanced — receiver acceptance ranges</summary>
+      <div class="slabel" style="margin-top:10px"><span>ATA receive range</span><b id="lblAta">31 · #6431F</b></div>
+      <input type="range" id="sAta" min="0" max="31" value="31" step="1">
+      <div class="slabel"><span>SeGo/eGo receive range</span><b id="lblSego">31 · #6451F</b></div>
+      <input type="range" id="sSego" min="0" max="31" value="31" step="1">
+      <div class="small">31 = max acceptance. Trim these <i>after</i> setting TX power.</div>
+    </details>
+  </fieldset>
+
+  <div class="row" style="margin-top:16px">
+    <button id="btnSend" class="send" disabled>⬆️ Send &amp; save to reader</button>
+    <button id="btnFactory" class="warnbtn" disabled>Factory reset (#66F)</button>
+  </div>
+  <div class="small" style="margin-top:6px">Send writes <code>#01</code> → your settings → <code>#00</code> (saves to NVM), then re-reads to confirm.</div>
+</div>
+
+<div class="card">
+  <h2>Raw communication</h2>
+  <div class="row" style="margin-bottom:8px">
+    <input class="raw" id="rawIn" placeholder="#570" autocomplete="off" spellcheck="false">
+    <button id="btnRaw" disabled>Send</button>
+    <button id="btnClear">Clear log</button>
+  </div>
+  <div id="raw"><span class="sys">Serial log — every byte in and out appears here.\n</span></div>
+</div>
+
+<div class="sub" style="text-align:center;margin-top:18px">
+  Part of <a href="../">fieldtoolkit.com</a> · <a href="https://github.com/theLostPing/transcore-encompass4-wiegand">source &amp; offline copy</a> · proven live on Lenel 1320
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let port=null, writer=null, reader=null, keepReading=false, rxAccum='';
+
+// ---- environment checks ----
+if(location.protocol === 'file:'){
+  $('compat').innerHTML = '<div class="banner warn">⚠️ Opened as a local file. Browsers block serial access from <code>file://</code> — use the hosted page at <b>fieldtoolkit.com/e4/</b> to actually talk to the reader. This local copy is reference-only.</div>';
+} else if(!('serial' in navigator)){
+  $('compat').innerHTML = '<div class="banner bad">❌ This browser has no Web Serial support. Open this page in <b>Chrome or Edge</b> on a desktop. (Firefox, Safari, and mobile browsers will not work.)</div>';
+  $('btnConnect').disabled = true;
+}
+
+// ---- logging ----
+function pad(n){ return String(n).padStart(2,'0'); }
+function stamp(){ const d=new Date(); return pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds()); }
+function log(text, cls){
+  const el=$('raw'); const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+  const span=document.createElement('span');
+  span.className=cls;
+  span.innerHTML = (cls==='tx'||cls==='rx'||cls==='err'||cls==='sys')
+    ? `<span class="ts">${stamp()} ${cls==='tx'?'»':cls==='rx'?'«':' '}</span> ${escapeHtml(text)}\n`
+    : escapeHtml(text)+'\n';
+  el.appendChild(span);
+  if(atBottom) el.scrollTop = el.scrollHeight;
+}
+function escapeHtml(s){ return s.replace(/[&<>]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+const sleep = ms => new Promise(r=>setTimeout(r,ms));
+
+// ---- connection ----
+async function connect(){
+  try{
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate:9600, dataBits:8, stopBits:1, parity:'none', flowControl:'none' });
+  }catch(e){ log('Connect cancelled / failed: '+e.message,'err'); return; }
+  keepReading=true;
+  writer = port.writable.getWriter();
+  readLoop();
+  setConnected(true);
+  log('Connected — 9600 8-N-1.','sys');
+}
+async function readLoop(){
+  const dec = new TextDecoder();
+  reader = port.readable.getReader();
+  try{
+    while(keepReading){
+      const {value,done} = await reader.read();
+      if(done) break;
+      const t = dec.decode(value);
+      rxAccum += t;
+      // strip lone CRs for display readability
+      log(t.replace(/\r/g,''),'rx');
+    }
+  }catch(e){ if(keepReading) log('Read error: '+e.message,'err'); }
+  finally{ try{ reader.releaseLock(); }catch(_){} }
+}
+async function disconnect(){
+  keepReading=false;
+  try{ if(reader) await reader.cancel(); }catch(_){}
+  try{ if(writer) writer.releaseLock(); }catch(_){}
+  try{ await port.close(); }catch(_){}
+  port=writer=reader=null;
+  setConnected(false);
+  log('Disconnected.','sys');
+}
+function setConnected(c){
+  $('status').textContent = c?'Connected':'Disconnected';
+  $('status').className = 'pill '+(c?'on':'off');
+  ['btnBanner','btnRead','btnSend','btnRaw','btnFactory'].forEach(id=>$(id).disabled=!c);
+  $('btnConnect').disabled=c; $('btnDisconnect').disabled=!c;
+}
+
+// ---- core command primitive ----
+async function sendCmd(cmd, waitMs=500){
+  if(!writer){ log('Not connected.','err'); return ''; }
+  rxAccum='';
+  log(cmd,'tx');
+  await writer.write(new TextEncoder().encode(cmd + '\r'));
+  await sleep(waitMs);
+  return rxAccum.replace(/\r/g,' ').trim();
+}
+
+// ---- banner test ----
+async function bannerTest(){
+  disableAll(true);
+  log('=== BANNER TEST — POWER-CYCLE THE READER NOW, listening 30s ===','sys');
+  rxAccum='';
+  const end=Date.now()+30000;
+  while(Date.now()<end){ await sleep(250); }
+  if(rxAccum.replace(/\s/g,'').length){ log('✔ Banner / data received — reader-TX path is good.','sys'); }
+  else{ log('✘ Nothing heard. Likely TX/RX reversed (SWAP Red↔Black), no power, or no common ground.','err'); }
+  disableAll(false);
+}
+
+// ---- read config & populate controls ----
+function tokens(str){ const m={}; (str.match(/[A-Za-z]\w+/g)||[]).forEach(t=>{ m[t[0].toUpperCase()]=t.slice(1); }); return m; }
+async function readConfig(){
+  disableAll(true);
+  $('state').style.display='table';
+  await sendCmd('#01');
+  const sn = await sendCmd('#505');
+  const rf = await sendCmd('#527');
+  await sendCmd('#570');
+  const wg = await sendCmd('#532');
+  const fmt = await sendCmd('#531');
+  await sendCmd('#00');
+
+  $('vModel').textContent = sn || '—';
+
+  // #527: C1 O1 T1 F20 R1F G1F A00 I04
+  const t = tokens(rf);
+  if(t.O!==undefined){
+    const on = t.O!=='0';
+    $('vRf').innerHTML = on?'<span style="color:var(--acc)">ON</span>':'<span style="color:var(--bad)">OFF</span>';
+    $('cbRf').checked = on;
+  }
+  if(t.A!==undefined){ const db=parseInt(t.A,16); if(!isNaN(db)){ $('sTx').value=Math.max(0,Math.min(100,100-db*5)); updTx(); } }
+  if(t.R!==undefined){ const v=parseInt(t.R,16); if(!isNaN(v)){ $('sAta').value=Math.min(31,v); updAta(); } }
+  if(t.G!==undefined){ const v=parseInt(t.G,16); if(!isNaN(v)){ $('sSego').value=Math.min(31,v); updSego(); } }
+  if(t.F!==undefined){ const f={'1A':'915 MHz','20':'918 MHz'}[t.F.toUpperCase()]||('hex '+t.F.toUpperCase()); $('vFreq').textContent='F'+t.F.toUpperCase()+' · '+f; }
+
+  // #532: looks like "#TOF 1" (1 = on)
+  const won = /\b1\b/.test(wg) && !/\b0\b/.test(wg.replace(/TOF/i,''));
+  const wonSimple = /tof\s*1/i.test(wg) || /\b1\b/.test(wg);
+  $('vWieg').innerHTML = wonSimple?'<span style="color:var(--acc)">ON (TOF 1)</span> &nbsp;<span class="small">'+escapeHtml(wg)+'</span>':'<span style="color:var(--bad)">OFF — factory default</span> &nbsp;<span class="small">'+escapeHtml(wg)+'</span>';
+  $('cbWieg').checked = wonSimple;
+
+  // #531: try to detect bit-count in the reply -> set radio
+  const bits = (fmt.match(/\b(26|32|34|35|37)\b/)||[])[1];
+  const map={'26':'871','32':'872','34':'873','35':'874','37':'875'};
+  if(bits && map[bits]){ const r=document.querySelector(`input[name=fmt][value="${map[bits]}"]`); if(r) r.checked=true; log(`Detected ${bits}-bit format from #531.`,'sys'); }
+  else log('Could not auto-detect Wiegand format from #531 reply — left radio as-is. Raw: '+fmt,'sys');
+
+  log('✔ Read complete — controls now reflect the reader.','sys');
+  disableAll(false);
+}
+
+// ---- send / program ----
+async function program(){
+  if(!confirm('Write these settings to the reader and save to NVM?')) return;
+  disableAll(true);
+  log('=== PROGRAMMING ===','sys');
+  await sendCmd('#01');
+  await sendCmd($('cbWieg').checked ? '#451' : '#450');           // Wiegand on/off
+  await sendCmd($('cbRf').checked   ? '#6401' : '#6400');         // RF on/off
+  await sendCmd('#'+document.querySelector('input[name=fmt]:checked').value); // format
+  await sendCmd('#644'+hex2((100-$('sTx').value)/5));             // TX attenuation (100%=0dB)
+  await sendCmd('#643'+hex2($('sAta').value));                    // ATA range
+  await sendCmd('#645'+hex2($('sSego').value));                   // SeGo range
+  await sendCmd('#00');                                            // save + data mode
+  log('Saved. Re-reading to confirm…','sys');
+  await sleep(300);
+  await readConfig();
+}
+async function factory(){
+  if(!confirm('Factory reset the reader (#66F)? Keeps RF frequency, wipes everything else.')) return;
+  disableAll(true);
+  await sendCmd('#01'); await sendCmd('#66F'); await sendCmd('#00');
+  log('Factory reset sent.','sys');
+  await sleep(300); await readConfig();
+}
+
+function disableAll(busy){
+  ['btnBanner','btnRead','btnSend','btnRaw','btnFactory','btnDisconnect'].forEach(id=>$(id).disabled=busy || !port);
+}
+
+// ---- hex + slider labels ----
+function hex2(n){ return ('0'+parseInt(n).toString(16).toUpperCase()).slice(-2); }
+function updTx(){ const pct=+$('sTx').value; const db=(100-pct)/5; $('lblTx').textContent=`${pct}% · ${db} dB cut · #644${hex2(db)}`; }
+function updAta(){ const v=$('sAta').value; $('lblAta').textContent=`${v} · #643${hex2(v)}`; }
+function updSego(){ const v=$('sSego').value; $('lblSego').textContent=`${v} · #645${hex2(v)}`; }
+
+// ---- wiring ----
+$('btnConnect').onclick=connect;
+$('btnDisconnect').onclick=disconnect;
+$('btnBanner').onclick=bannerTest;
+$('btnRead').onclick=readConfig;
+$('btnSend').onclick=program;
+$('btnFactory').onclick=factory;
+$('btnRaw').onclick=async()=>{ const c=$('rawIn').value.trim(); if(c){ await sendCmd(c, 600); } };
+$('rawIn').addEventListener('keydown',e=>{ if(e.key==='Enter') $('btnRaw').click(); });
+$('btnClear').onclick=()=>{ $('raw').innerHTML='<span class="sys">Cleared.\n</span>'; };
+$('sTx').oninput=updTx; $('sAta').oninput=updAta; $('sSego').oninput=updSego;
+window.addEventListener('beforeunload',()=>{ if(port) disconnect(); });
+</script>
+</body>
+</html>
