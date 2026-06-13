@@ -96,13 +96,15 @@ Use whichever cable you have.
 
 **USB-to-RJ45 console cable** — **don't cut the RJ45 tip off your cable.** You'll want a plain **RJ45 coupler** and a piece of **Cat6** between the cable and the reader **regardless of distance** — a foot or fifty feet — so your console cable stays intact and reusable. Plug the console cable into the coupler, run the Cat6 from there to the reader (RJ45 end into the coupler), then cut and strip the far end and land its bare conductors on the reader's leads. This is how I did it, using **one half of a Cat6 patch cable**.
 
-With standard **T568B** color coding, only three of the eight conductors are used:
+With standard **T568B** color coding, only three of the eight conductors are used. This is the **field-proven landing** — green to the reader's **Red**, green/white to the reader's **Black**:
 
 | Cat6 conductor (T568B) | RJ45 pin | Console-cable signal | Lands on reader |
 |------------------------|----------|----------------------|-----------------|
-| **green/white** (green stripe) | 3 | TXD (cable → reader) | reader **RX** — Red |
-| **green** | 6 | RXD (reader → cable) | reader **TX** — Black |
+| **green** | 6 | TXD (cable → reader) | reader **RX** — Red |
+| **green/white** (green stripe) | 3 | RXD (reader → cable) | reader **TX** — Black |
 | **blue** | 4 | GND | reader **GND** — Yellow |
+
+> A Cisco USB console cable is a **rollover** cable (pins 3 and 6 are crossed internally), so the UART's TXD comes out the RJ45 on **pin 6 — green**, not green/white. That's why green lands on the reader's Red (its RX). A naïve "straight T568B" guess gets this backwards; the loopback test below confirms which pin is really TX on *your* cable.
 
 Only **green, green/white, and blue** matter; the other five go unused. (If your cable or coupler is wired **T568A**, the green and orange pairs swap — re-verify with the loopback test.)
 
